@@ -115,6 +115,28 @@ test('不正な行だけが「送信できない記録」に移り、残りは�
   );
 });
 
+test('送信できなかった記録は、サーバー側を直したあと retryDead で送り直せる', async () => {
+  const storage = fakeStorage();
+  const strict = createQueue({
+    storage,
+    send: async () => {
+      throw dataError();
+    },
+  });
+  strict.put(row('a'));
+  await strict.sync();
+  assert.equal(strict.dead().length, 1);
+
+  // サーバー側の制約を直してから、ページを開き直した想定
+  const sent = [];
+  const reopened = createQueue({ storage, send: async (rows) => sent.push(...rows) });
+  reopened.retryDead();
+  assert.equal(reopened.dead().length, 0);
+  await reopened.sync();
+  assert.deepEqual(sent, [row('a')]);
+  assert.equal(reopened.size(), 0);
+});
+
 test('設定ミスなど行のせいではないエラーでは、記録を捨てない', async () => {
   const queue = createQueue({
     storage: fakeStorage(),

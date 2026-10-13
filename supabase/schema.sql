@@ -6,7 +6,7 @@ create table if not exists public.records (
   id          uuid primary key,                    -- スマホ側で発行（再送しても二重登録にならない）
   item        text not null,
   color1      text not null,
-  color2      text,                                -- 2色の種類だけ入る
+  color2      text,                                -- 2色の種類で 2色えらんだときだけ入る
   recorded_at timestamptz not null,                -- スマホで登録ボタンを押した時刻（集計に使う）
   received_at timestamptz not null default now(),  -- サーバーに届いた時刻
   device      text,                                -- 端末の呼び名（任意）
@@ -22,10 +22,14 @@ create table if not exists public.records (
     color2 is null
     or color2 in ('pink', 'red', 'yellow', 'orange', 'lilac', 'blue', 'green', 'peach')
   ),
-  constraint records_two_color_check check (
-    (item in ('flower', 'heart', 'anpanman')) = (color2 is not null)
-  ),
   constraint records_device_check check (device is null or char_length(device) <= 40)
+);
+
+-- 2色の種類（はな・ハート・アンパンマン）は 1色でも 2色でも登録できる。1色の種類は 2色目を持てない。
+-- 以前の「2色の種類は必ず 2色」という決まりを置き換えるため、作り直す形にしている。
+alter table public.records drop constraint if exists records_two_color_check;
+alter table public.records add constraint records_two_color_check check (
+  color2 is null or item in ('flower', 'heart', 'anpanman')
 );
 
 create index if not exists records_recorded_at_idx on public.records (recorded_at);

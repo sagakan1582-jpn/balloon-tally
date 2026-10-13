@@ -84,6 +84,17 @@ export function createQueue({ storage, send, key = 'balloon.queue' }) {
       persist();
     },
     sync,
+    // 送れなかった行をキューに戻す。サーバー側の設定を直したあとに開き直せば送り直される。
+    retryDead() {
+      if (!dead.length) return;
+      for (const { row } of dead) {
+        if (!entries.some((entry) => entry.row.id === row.id)) {
+          entries.push({ row, v: `${Date.now()}-${++seq}` });
+        }
+      }
+      dead = [];
+      persist();
+    },
     size: () => entries.length,
     dead: () => dead.slice(),
     lastError: () => lastError,

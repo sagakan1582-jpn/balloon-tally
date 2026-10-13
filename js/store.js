@@ -140,6 +140,7 @@ export const backend = DEMO ? demoBackend() : supabaseBackend();
 export const queue = createQueue({ storage, send: (rows) => backend.upsert(rows) });
 
 // 未送信分を、起動時・電波復帰時・画面に戻ったとき・15 秒ごとに送り直す。
+// サーバーに拒否された行も、起動時に 1 回だけ送り直してみる。
 export function startAutoSync() {
   const run = () => queue.sync();
   window.addEventListener('online', run);
@@ -147,5 +148,6 @@ export function startAutoSync() {
     if (!document.hidden) run();
   });
   setInterval(run, 15000);
+  queue.retryDead();
   run();
 }

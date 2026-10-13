@@ -75,9 +75,12 @@ function render() {
   }
 
   const item = selectedItem && itemById(selectedItem);
-  $('color-hint').textContent = item ? `${item.colors}色えらぶ` : '';
+  $('color-hint').textContent = !item ? '' : item.colors === 2 ? '1色か2色えらぶ' : '1色えらぶ';
 
-  const remaining = item ? item.colors - picked.length : 0;
+  // 2色の種類は 1色だけでも登録できる。
+  let rest = null;
+  if (item && picked.length === 0) rest = '色をえらぶ';
+  else if (item && picked.length < item.colors) rest = '2色目も選べます';
   const summary = $('summary');
   if (!item && picked.length === 0) {
     fill(summary, h('span', { class: 'muted' }, '種類と色をえらんでください'));
@@ -99,16 +102,16 @@ function render() {
           h('span', { class: 'chip-x' }, '×'),
         ),
       ),
-      remaining > 0 && h('span', { class: 'muted' }, `あと${remaining}色`),
+      rest && h('span', { class: 'muted' }, rest),
     );
   }
 
-  $('submit-btn').disabled = !item || remaining !== 0;
+  $('submit-btn').disabled = !item || picked.length === 0;
 }
 
 function submit() {
   const item = selectedItem && itemById(selectedItem);
-  if (!item || picked.length !== item.colors) return;
+  if (!item || picked.length === 0) return;
   const row = {
     id: newId(),
     item: item.id,

@@ -67,9 +67,16 @@ test('normalizeColors: 同じ色を 2 回えらべる', () => {
   assert.deepEqual(normalizeColors('heart', ['red', 'red']), { color1: 'red', color2: 'red' });
 });
 
+test('normalizeColors: 2色の種類は 1色だけでも登録できる', () => {
+  assert.deepEqual(normalizeColors('flower', ['blue']), { color1: 'blue', color2: null });
+  assert.deepEqual(normalizeColors('anpanman', ['red']), { color1: 'red', color2: null });
+});
+
 test('normalizeColors: 色の数が合わない・未知の値はエラー', () => {
   assert.throws(() => normalizeColors('dog', ['pink', 'blue']));
-  assert.throws(() => normalizeColors('flower', ['pink']));
+  assert.throws(() => normalizeColors('dog', []));
+  assert.throws(() => normalizeColors('flower', []));
+  assert.throws(() => normalizeColors('flower', ['pink', 'blue', 'red']));
   assert.throws(() => normalizeColors('dog', ['gold']));
   assert.throws(() => normalizeColors('cat', ['pink']));
 });
@@ -89,14 +96,16 @@ test('aggregate は種類・時間帯・色・組み合わせを数え、取り�
     rec('flower', 'pink', 'blue', '2026-11-01T13:00:00+09:00'),
     rec('flower', 'pink', 'blue', '2026-11-01T13:30:00+09:00'),
     rec('heart', 'red', 'red', '2026-11-01T18:20:00+09:00'),
+    rec('flower', 'yellow', null, '2026-11-01T14:00:00+09:00'), // 2色の種類を 1色で
     rec('bear', 'green', null, '2026-11-01T11:00:00+09:00', {
       deleted_at: '2026-11-01T02:01:00Z',
     }),
   ]);
 
-  assert.equal(result.total, 5);
+  assert.equal(result.total, 6);
   assert.equal(result.byItem.dog, 2);
-  assert.equal(result.byItem.flower, 2);
+  assert.equal(result.byItem.flower, 3);
+  assert.equal(result.colorUse.flower.yellow, 1);
   assert.equal(result.byItem.bear, 0);
 
   assert.equal(result.bySlot['10'].total, 2);
