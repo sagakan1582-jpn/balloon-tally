@@ -313,6 +313,23 @@ button {
   word-break: auto-phrase;
 }
 
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.section-head h2 {
+  margin: 0;
+}
+
+.section-head .check {
+  min-height: 36px;
+  color: var(--ink-2);
+}
+
 .recent {
   margin: 0;
   padding: 0;

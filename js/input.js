@@ -7,6 +7,7 @@ import { DEMO, backend, queue, loadJson, saveJson, startAutoSync, storage } from
 
 const RECENT_KEY = 'balloon.recent';
 const DEVICE_KEY = 'balloon.device';
+const SHOW_VOIDED_KEY = 'balloon.showVoided';
 const RECENT_KEEP = 30;
 const RECENT_SHOW = 8;
 const TOAST_MS = 6000;
@@ -15,6 +16,7 @@ let selectedItem = null;
 let picked = [];
 let recent = loadJson(RECENT_KEY, []);
 let deviceName = storage.getItem(DEVICE_KEY) ?? '';
+let showVoided = storage.getItem(SHOW_VOIDED_KEY) !== '0';
 let toastTimer = null;
 
 // 種類が未選択のあいだは 2 色まで先に選べる（色から先に聞いた場合のため）。
@@ -144,7 +146,11 @@ function setVoided(id, voided) {
   queue.put(updated);
   queue.sync();
   renderRecent();
-  showToast(voided ? `${describe(row)} を取り消しました` : `${describe(row)} を元に戻しました`);
+  // 取り消し済みを隠していると一覧から消えるので、お知らせから元に戻せるようにする。
+  showToast(
+    voided ? `${describe(row)} を取り消しました` : `${describe(row)} を元に戻しました`,
+    voided && { label: '元に戻す', run: () => setVoided(id, false) },
+  );
 }
 
 function showToast(message, action) {
@@ -178,8 +184,9 @@ function hideToast() {
 
 function renderRecent() {
   const list = $('recent');
+  const rows = recent.filter((row) => showVoided || !row.deleted_at).slice(0, RECENT_SHOW);
   list.replaceChildren(
-    ...recent.slice(0, RECENT_SHOW).map((row) =>
+    ...rows.map((row) =>
       h(
         'li',
         { class: row.deleted_at ? 'voided' : '' },
@@ -198,7 +205,15 @@ function renderRecent() {
       ),
     ),
   );
-  if (!recent.length) list.append(h('li', { class: 'muted' }, 'まだありません'));
+  if (!rows.length) {
+    list.append(h('li', { class: 'muted' }, recent.length ? '表示する記録はありません' : 'まだありません'));
+  }
+}
+
+function setShowVoided(show) {
+  showVoided = show;
+  storage.setItem(SHOW_VOIDED_KEY, show ? '1' : '0');
+  renderRecent();
 }
 
 function renderSync() {
@@ -263,6 +278,8 @@ function init() {
   $('submit-btn').addEventListener('click', submit);
   $('clear-btn').addEventListener('click', clearSelection);
   $('device-btn').addEventListener('click', editDevice);
+  $('show-voided').checked = showVoided;
+  $('show-voided').addEventListener('change', (event) => setShowVoided(event.target.checked));
   $('demo-banner').hidden = !DEMO;
 
   let countTimer = null;
