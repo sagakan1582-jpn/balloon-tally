@@ -2,27 +2,13 @@
 import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
 import { jstDayRange } from './core.js';
 import { createQueue } from './queue.js';
+import { createSafeStorage } from './storage.js';
 
 export const DEMO = !SUPABASE_URL || !SUPABASE_KEY;
 
-// localStorage は環境によって使えないことがあるので、失敗しても落とさない。
-const memory = new Map();
-export const storage = {
-  getItem(key) {
-    try {
-      return window.localStorage.getItem(key);
-    } catch {
-      return memory.get(key) ?? null;
-    }
-  },
-  setItem(key, value) {
-    try {
-      window.localStorage.setItem(key, value);
-    } catch {
-      memory.set(key, value);
-    }
-  },
-};
+export const storage = createSafeStorage(() => window.localStorage);
+// 保存できる環境かを最初に確かめておく（できなければ画面に警告を出す）。
+storage.setItem('balloon.probe', String(Date.now()));
 
 export function loadJson(key, fallback) {
   try {
@@ -51,8 +37,9 @@ function supabaseBackend() {
   };
 
   return {
-    async upsert(rows) {
-      check(await table().upsert(rows, { onConflict: 'id' }));
+    // 同じ id の記録がすでにあれば何もしない（再送で既存の内容を上書きしない）。
+    async insert(rows) {
+      check(await table().upsert(rows, { onConflict: 'id', ignoreDuplicates: true }));
     },
     // dateStr が null なら全期間。
     async fetchRecords(dateStr) {
@@ -110,10 +97,10 @@ function demoBackend() {
   };
 
   return {
-    async upsert(rows) {
+    async insert(rows) {
       const map = all();
       for (const row of rows) {
-        map[row.id] = { received_at: new Date().toISOString(), ...map[row.id], ...row };
+        if (!map[row.id]) map[row.id] = { ...row, received_at: new Date().toISOString() };
       }
       commit(map);
     },
@@ -137,12 +124,20 @@ function demoBackend() {
 
 export const backend = DEMO ? demoBackend() : supabaseBackend();
 
-export const queue = createQueue({ storage, send: (rows) => backend.upsert(rows) });
+export const queue = createQueue({
+  storage,
+  insert: (rows) => backend.insert(rows),
+  setDeleted: (id, deletedAt) => backend.setDeleted(id, deletedAt),
+});
 
 // 未送信分を、起動時・電波復帰時・画面に戻ったとき・15 秒ごとに送り直す。
-// サーバーに拒否された行も、起動時に 1 回だけ送り直してみる。
+// サーバーに拒否された記録も、起動時に 1 回だけ送り直してみる。
 export function startAutoSync() {
   const run = () => queue.sync();
+  // 同じ端末のほかの画面がキューを変えたら、表示を合わせる。
+  window.addEventListener('storage', (event) => {
+    if (event.key?.startsWith('balloon.queue')) queue.notify();
+  });
   window.addEventListener('online', run);
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) run();

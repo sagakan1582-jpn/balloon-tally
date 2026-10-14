@@ -14,7 +14,6 @@ const TOAST_MS = 6000;
 
 let selectedItem = null;
 let picked = [];
-let recent = loadJson(RECENT_KEY, []);
 let deviceName = storage.getItem(DEVICE_KEY) ?? '';
 let showVoided = storage.getItem(SHOW_VOIDED_KEY) !== '0';
 let toastTimer = null;
@@ -122,8 +121,8 @@ function submit() {
     device: deviceName || null,
     deleted_at: null,
   };
-  queue.put(row);
-  saveRecent([row, ...recent]);
+  queue.add(row);
+  saveRecent([row, ...loadRecent()]);
   queue.sync();
   navigator.vibrate?.(30);
 
@@ -132,18 +131,18 @@ function submit() {
   showToast(`${describe(row)} を登録しました`, { label: '取り消す', run: () => setVoided(row.id, true) });
 }
 
-function saveRecent(rows) {
-  recent = rows.slice(0, RECENT_KEEP);
-  saveJson(RECENT_KEY, recent);
-}
+// 直近の登録は毎回保存領域から読み直す（同じ端末のほかの画面での登録・取り消しも反映される）。
+const loadRecent = () => loadJson(RECENT_KEY, []);
+const saveRecent = (rows) => saveJson(RECENT_KEY, rows.slice(0, RECENT_KEEP));
 
-// 取り消し／元に戻す。行まるごとをキューに入れ直すので、未送信でも送信済みでも同じ処理になる。
+// 取り消し／元に戻す。未送信でも送信済みでも、キューに入れておけば順に届く。
 function setVoided(id, voided) {
+  const recent = loadRecent();
   const row = recent.find((r) => r.id === id);
   if (!row) return;
-  const updated = { ...row, deleted_at: voided ? new Date().toISOString() : null };
-  saveRecent(recent.map((r) => (r.id === id ? updated : r)));
-  queue.put(updated);
+  const deletedAt = voided ? new Date().toISOString() : null;
+  saveRecent(recent.map((r) => (r.id === id ? { ...r, deleted_at: deletedAt } : r)));
+  queue.setDeleted(id, deletedAt);
   queue.sync();
   renderRecent();
   // 取り消し済みを隠していると一覧から消えるので、お知らせから元に戻せるようにする。
@@ -184,6 +183,7 @@ function hideToast() {
 
 function renderRecent() {
   const list = $('recent');
+  const recent = loadRecent();
   const rows = recent.filter((row) => showVoided || !row.deleted_at).slice(0, RECENT_SHOW);
   list.replaceChildren(
     ...rows.map((row) =>
@@ -226,6 +226,9 @@ function renderSync() {
   const error = queue.lastError();
   const dead = queue.dead().length;
   const messages = [];
+  if (!storage.isPersistent()) {
+    messages.push('この端末には記録を保存できません（プライベートモードや容量不足）。画面を閉じる前に「送信済み」になっているか確認してください。');
+  }
   if (error?.code) messages.push(`サーバーエラーで送信できません：${error.message}`);
   if (dead) messages.push(`送信できなかった記録が ${dead} 件あります。設定（種類・色）を確認してください。`);
   $('alert').textContent = messages.join(' ／ ');
@@ -290,6 +293,9 @@ function init() {
     countTimer = setTimeout(refreshCount, 200);
   });
   setInterval(refreshCount, 30000);
+  window.addEventListener('storage', (event) => {
+    if (event.key === RECENT_KEY) renderRecent();
+  });
 
   render();
   renderRecent();

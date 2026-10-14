@@ -1,7 +1,7 @@
 // 画面のファイルを端末に控えておき、電波が切れていてもアプリを開けるようにする。
 // 常にネットワークを優先するので、更新は次に開いたときに反映される。
 // ファイルを追加・改名したら SHELL を直し、CACHE の番号を上げること。
-const CACHE = 'balloon-v1';
+const CACHE = 'balloon-v2';
 const SHELL = [
   './',
   'index.html',
@@ -10,6 +10,7 @@ const SHELL = [
   'js/config.js',
   'js/core.js',
   'js/queue.js',
+  'js/storage.js',
   'js/store.js',
   'js/dom.js',
   'js/icons.js',
