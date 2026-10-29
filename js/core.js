@@ -49,8 +49,8 @@ export const slotLabel = (slot) => (slot === OUT_SLOT ? '時間外' : `${slot}�
 export function normalizeColors(itemId, picked) {
   const item = itemById(itemId);
   if (!item) throw new Error(`unknown item: ${itemId}`);
-  if (picked.length < 1 || picked.length > item.colors) {
-    throw new Error(`${item.label} は 1〜${item.colors} 色えらぶ必要があります`);
+  if (picked.length !== item.colors) {
+    throw new Error(`${item.label} は ${item.colors} 色えらぶ必要があります`);
   }
   const order = picked.map((id) => {
     const index = COLORS.findIndex((color) => color.id === id);

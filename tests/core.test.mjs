@@ -67,9 +67,9 @@ test('normalizeColors: 同じ色を 2 回えらべる', () => {
   assert.deepEqual(normalizeColors('heart', ['red', 'red']), { color1: 'red', color2: 'red' });
 });
 
-test('normalizeColors: 2色の種類は 1色だけでも登録できる', () => {
-  assert.deepEqual(normalizeColors('flower', ['blue']), { color1: 'blue', color2: null });
-  assert.deepEqual(normalizeColors('anpanman', ['red']), { color1: 'red', color2: null });
+test('normalizeColors: 2色の種類は 1色だけでは登録できない', () => {
+  assert.throws(() => normalizeColors('flower', ['blue']));
+  assert.throws(() => normalizeColors('anpanman', ['red']));
 });
 
 test('normalizeColors: 色の数が合わない・未知の値はエラー', () => {

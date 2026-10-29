@@ -3,7 +3,7 @@
 export const SUPABASE_URL = 'https://zodhnyriycmkzgfsozat.supabase.co';
 export const SUPABASE_KEY = 'sb_publishable_MtcJJeT1YYITsYJTNFoR8A_nqFCM0vY';
 
-// 種類。colors は選べる色の最大数（2 の種類は 1色でも 2色でも登録できる）。
+// 種類。colors は選ぶ色の数（2 の種類は必ず 2色。同じ色を 2 回でもよい）。
 // supabase/schema.sql の check 制約と揃えること。
 export const ITEMS = [
   { id: 'dog', label: '犬', colors: 1 },

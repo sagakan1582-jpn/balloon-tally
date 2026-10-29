@@ -76,12 +76,12 @@ function render() {
   }
 
   const item = selectedItem && itemById(selectedItem);
-  $('color-hint').textContent = !item ? '' : item.colors === 2 ? '1色か2色えらぶ' : '1色えらぶ';
+  $('color-hint').textContent = !item ? '' : item.colors === 2 ? '2色えらぶ（同じ色2回も可）' : '1色えらぶ';
 
-  // 2色の種類は 1色だけでも登録できる。
+  // 2色の種類は 2色そろうまで登録できない（同じ色を 2 回でもよい）。
   let rest = null;
   if (item && picked.length === 0) rest = '色をえらぶ';
-  else if (item && picked.length < item.colors) rest = '2色目も選べます';
+  else if (item && picked.length < item.colors) rest = 'もう1色えらぶ';
   const summary = $('summary');
   if (!item && picked.length === 0) {
     fill(summary, h('span', { class: 'muted' }, '種類と色をえらんでください'));
@@ -107,7 +107,7 @@ function render() {
     );
   }
 
-  $('submit-btn').disabled = !item || picked.length === 0;
+  $('submit-btn').disabled = !item || picked.length !== item.colors;
 }
 
 function submit() {
