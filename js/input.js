@@ -208,6 +208,19 @@ function renderRecent() {
   if (!rows.length) {
     list.append(h('li', { class: 'muted' }, recent.length ? '表示する記録はありません' : 'まだありません'));
   }
+  $('clear-recent-btn').hidden = !recent.length;
+}
+
+// 画面の履歴だけを消す。集計（サーバー）の記録と未送信キューには触れない。
+function clearRecent() {
+  if (!loadRecent().length) return;
+  const ok = confirm(
+    'この端末の「直近の登録」の表示を消しますか？\n\n集計の記録は消えません。消したあとの取り消しは集計画面から行ってください。',
+  );
+  if (!ok) return;
+  saveRecent([]);
+  hideToast();
+  renderRecent();
 }
 
 function setShowVoided(show) {
@@ -281,6 +294,7 @@ function init() {
   $('submit-btn').addEventListener('click', submit);
   $('clear-btn').addEventListener('click', clearSelection);
   $('device-btn').addEventListener('click', editDevice);
+  $('clear-recent-btn').addEventListener('click', clearRecent);
   $('show-voided').checked = showVoided;
   $('show-voided').addEventListener('change', (event) => setShowVoided(event.target.checked));
   $('demo-banner').hidden = !DEMO;
